@@ -1,16 +1,17 @@
 use jsonwebtoken::*;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,
+    pub role: String,
     pub exp: usize,
 }
 
-pub fn sign(sub: String, secret: &str) -> String {
+pub fn sign(sub: String, role: String, secret: &str) -> String {
     encode(
         &Header::default(),
-        &Claims { sub, exp: 2000000000 },
-        &EncodingKey::from_secret(secret.as_ref()),
+        &Claims { sub, role, exp: 2000000000 },
+        &EncodingKey::from_secret(secret.as_bytes()),
     ).unwrap()
 }
