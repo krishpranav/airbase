@@ -5,19 +5,19 @@ use uuid::Uuid;
 use crate::{state::AppState, utils::password, auth::jwt};
 
 #[derive(Deserialize)]
-pub struct Signup {
+pub struct Credentials {
     pub email: String,
     pub password: String,
 }
 
 pub async fn signup(
     State(state): State<AppState>,
-    Json(data): Json<Signup>,
+    Json(data): Json<Credentials>,
 ) -> Json<String> {
-    let hash = password::hash(&data.password);
     let id = Uuid::new_v4();
+    let hash = password::hash(&data.password);
 
-    sqlx::query("INSERT INTO users VALUES ($1,$2,$3)")
+    sqlx::query("INSERT INTO users (id,email,password,role) VALUES ($1,$2,$3,'user')")
         .bind(id)
         .bind(&data.email)
         .bind(&hash)
@@ -25,5 +25,22 @@ pub async fn signup(
         .await
         .unwrap();
 
-    Json(jwt::sign(id.to_string(), "secret"))
+    Json(jwt::sign(id.to_string(), "user".into(), &state.jwt_secret))
+}
+
+pub async fn login(
+    State(state): State<AppState>,
+    Json(data): Json<Credentials>,
+) -> Json<String> {
+    let record = sqlx::query(
+        "SELECT id,password,role FROM users WHERE email=$1"
+    )
+    .bind(&data.email)
+    .fetch_one(&state.db)
+    .await
+    .unwrap();
+
+    password::verify(&data.password, &record.password);
+
+    Json(jwt::sign(record.id.to_string(), record.role, &state.jwt_secret))
 }
