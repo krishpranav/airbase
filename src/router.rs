@@ -1,17 +1,11 @@
 use axum::Router;
-use axum::routing::*;
-use sqlx::PgPool;
-use tokio::sync::broadcast;
+use crate::{auth, db, realtime, storage, state::AppState};
 
-use crate::{auth, db, storage, realtime};
-
-pub fn create_router(db: PgPool, tx: broadcast::Sender<String>) -> Router {
-    let state = crate::state::AppState { db, events: tx };
-
+pub fn create(state: AppState) -> Router<AppState> {
     Router::new()
         .nest("/auth", auth::routes())
         .nest("/db", db::routes())
-        .nest("/storage", storage::routes())
         .nest("/realtime", realtime::routes())
+        .nest("/storage", storage::routes())
         .with_state(state)
 }
